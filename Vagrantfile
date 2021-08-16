@@ -42,7 +42,7 @@ Vagrant.configure("2") do |config|
   config.vm.define "rhSlave1" do |rhSlave1|
     rhSlave1.vm.hostname  = "rhSlave1.localnet.com"
     rhSlave1.vm.network :private_network, name: "VirtualBox Host-Only Ethernet Adapter", ip: "192.168.3.109"
-    rhSlave1.vm.provision :shell, inline: "echo VM rhSlave1 is ready IP: 192.168.3.108", run: "always"
+    rhSlave1.vm.provision :shell, inline: "echo VM rhSlave1 is ready IP: 192.168.3.109", run: "always"
 
     rhSlave1.vm.provider :virtualbox do |v|
       v.memory = 2048
