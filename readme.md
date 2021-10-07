@@ -65,7 +65,7 @@ re-start ssh config as:
 ````
 *save the new document in the PWD because need root access to be saved in /etc/ssh*
 
-  to add # in front of *PasswordAuthentication yes* is <p style="color:red">NOT POSSIBLE</p>
+  to add # in front of *PasswordAuthentication yes* is <span style="color:red">NOT POSSIBLE</span>
 
 test the ansible connections as:
 > ansible -m ping all
