@@ -20,6 +20,8 @@ VM_DISK_SIZE         = "10GB"
 VM_BOOTSTRAPPER      = "bootstrapManager.sh"
 VM_MEMORY            = 2048
 VM_CPUS              = 2
+VBGUEST_UPDATE       = true
+VBGUEST_UPGRADE      = true
 
 #TODO use .env file to store variables above,  see https://github.com/gosuri/vagrant-env
 Vagrant.configure("2") do |config|
@@ -39,7 +41,8 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "#{VM_MANAGER_NAME}" do |node|
     # Following provision is only for node on top of the general provision
-    node.vbguest.auto_update = true
+    node.vbguest.auto_update = VBGUEST_UPDATE
+    node.vbguest.installer_options = { allow_kernel_upgrade: VBGUEST_UPGRADE }
     node.vm.provision :shell, path: "#{VM_BOOTSTRAPPER}"
     node.vm.hostname  =  "#{VM_MANAGER_NAME}.localnet.com"
     node.vbguest.installer_options = { allow_kernel_upgrade: true }
@@ -64,7 +67,8 @@ Vagrant.configure("2") do |config|
     # node.vm.provision :shell, inline: "echo VM #{VM_SLAVE_NAME} is ready IP: #{VM_SLAVE_IP}", run: "always"
     node.vbguest.installer_options = { allow_kernel_upgrade: true }
     node.vbguest.auto_update = true
-    node.vm.synced_folder ".", "/home/vagrant/centos"
+    node.vm.synced_folder ".", "/home/vagrant/centos", owner:"vagrant"
+
 
     node.vm.provider :virtualbox do |v|
       v.memory = VM_MEMORY
