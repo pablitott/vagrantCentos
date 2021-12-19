@@ -8,6 +8,8 @@
 sudo yum install -y epel-release
 sudo yum install -y python3
 sudo alternatives --set python /usr/bin/python3
+seudo yum install -y pip
+
 sudo yum install -y ansible ansible-doc
 sudo yum install -y python3-argcomplete
 sudo activate-global-python-argcomplete

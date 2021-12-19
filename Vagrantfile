@@ -12,89 +12,73 @@
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
 
-VM_MANAGER_IP        = "172.16.245.100"
-VM_SLAVE_IP          = "192.168.3.109"
-VM_DB_IP             = "192.168.3.112"
+  # array use: https://github.com/patrickdlee/vagrant-examples/blob/master/example6/Vagrantfile
 
-VM_MANAGER_NAME      = "rhManager"
-VM_SLAVE_NAME        = "rhSlave1"
-VM_DB_NAME           = "rhDatabase"
-VM_DISK_SIZE         = "10GB"
-VM_BOOTSTRAPPER      = "bootstrapManager.sh"
-VM_MEMORY            = 2048
-VM_CPUS              = 2
-VBGUEST_UPDATE       = true
+  # get IP address: VBoxManage guestproperty get "rhSlave1" "/VirtualBox/GuestInfo/Net/0/V4/IP"
+  # vboxmanage startvm <vm-uuid> --type emergencystop
+nodes = [
+  { :hostname => "rhManager.localnet",   :ip => "172.16.245.100", :name => "rhManager",  :isManager => true  },
+  { :hostname => "rhDatabase.localnet",  :ip => "192.168.3.112",  :name => "rhDatabase", :isManager => false },
+  { :hostname => "rhSlave1.localnet",    :ip => "192.168.3.109",  :name => "rhSlave1",   :isManager => false },
+  { :hostname => "rhSlave2.localnet",    :ip => "192.168.3.110",  :name => "rhSlave2",   :isManager => false },
+]
+box_name             = "centos/8"
+vm_disk_size         = "10GB"
+vm_bootstrapper      = "bootstrapManager.sh"
+vm_memory            = 2048
+vm_cpus              = 2
+vbguest_update       = true
+nic_name             = "VirtualBox Host-Only Ethernet Adapter"
 
 #TODO use .env file to store variables above,  see https://github.com/gosuri/vagrant-env
 Vagrant.configure("2") do |config|
-  config.vm.box    = "centos/8"
-  config.vm.disk :disk, size: "#{VM_DISK_SIZE}", primary: VBGUEST_UPDATE
-  config.vbguest.installer_options = { allow_kernel_upgrade: VBGUEST_UPDATE }
-  config.vbguest.auto_update = true
-# following provision is running for all VMs defined
-  config.vm.provision "shell", inline: <<-SHELL
+  # following provision is running for all VMs defined
+  # I'm using shell provisioning as an example]
+  config.vm.provision "shell", privileged: true, inline: <<-SHELL
       echo "Installing common packages for manager and slaves"
-      sudo yum update
+      yum update
       echo "Install developer tools"
-      sudo yum group install -y "developer tools"
+      yum group install -y "developer tools"
       echo "Install kernel-headers"
-      sudo yum install -y kernel-headers
+      yum install -y kernel-headers
       echo "Install elfutils-libelf-devel"
-      sudo yum install -y elfutils-libelf-devel
+      yum install -y elfutils-libelf-devel
     SHELL
+    # end config.vm.provision
+    nodes.each do |node|
+      config.vm.define node[:name] do |nodeconfig|
+        nodeconfig.vm.box              = box_name
+        nodeconfig.vm.box_check_update = false
+        nodeconfig.vbguest.auto_update = vbguest_update
+        nodeconfig.vbguest.installer_options = { allow_kernel_upgrade: vbguest_update }
 
-##############       rhManager Machine       ##################
-    config.vm.define "#{VM_MANAGER_NAME}" do |node|
-    # Following provision is only for node on top of the general provision
-    node.vm.provision :shell, path: "#{VM_BOOTSTRAPPER}"
-    node.vm.hostname  =  "#{VM_MANAGER_NAME}.localnet.com"
-    node.vm.network :private_network, name: "VirtualBox Host-Only Ethernet Adapter", ip: VM_MANAGER_IP
-    node.vm.provision :shell, inline: "echo VM #{VM_MANAGER_NAME} is ready IP: #{VM_MANAGER_IP}", run: "always"
-    node.vm.synced_folder ".", "/home/vagrant/centos"
-    node.vm.provider :virtualbox do |v|
-      v.memory = VM_MEMORY
-      v.name   = "#{VM_MANAGER_NAME}"
-      v.cpus   = VM_CPUS
-    end
-##############       rhDatabase Machine       ##################
-    node.trigger.after :up do |trigger|
-      trigger.name = "Finished Message"
-      trigger.info = "VM #{VM_MANAGER_NAME} is ready IP: #{VM_MANAGER_IP}"
-    end
-    end
-  config.vm.define "#{VM_SLAVE_NAME}" do |node|
-    node.vm.hostname  = "#{VM_SLAVE_NAME}.localnet.com"
-    node.vm.network :private_network, name: "VirtualBox Host-Only Ethernet Adapter", ip: "#{VM_SLAVE_IP}"
-    node.vm.network "forwarded_port", guest:   80, host: 80
-    node.vm.provider :virtualbox do |v|
-      v.memory = VM_MEMORY
-      v.name   = "#{VM_SLAVE_NAME}"
-      v.cpus   = VM_CPUS
-    end
-    node.trigger.after :up do |trigger|
-      trigger.name = "Finished Message"
-      trigger.info = "VM #{VM_SLAVE_NAME} is ready IP: #{VM_SLAVE_IP}"
-    end
-  end
-##############       rhSlave1 Machine       ##################
-  config.vm.define "#{VM_DB_NAME}" do |node|
-    node.vm.hostname  = "#{VM_DB_NAME}.localnet.com"
-    node.vm.network :private_network, name: "VirtualBox Host-Only Ethernet Adapter", ip: "#{VM_DB_IP}"
-    node.ssh.insert_key = false
-    # node.vm.provision :shell, inline: "echo VM #{VM_SLAVE_NAME} is ready IP: #{VM_SLAVE_IP}", run: "always"
-    node.vm.synced_folder ".", "/vagrant", disabled:true, owner:"vagrant"
-    node.vm.provider :virtualbox do |v|
-      v.memory = VM_MEMORY
-      v.name   = "#{VM_DB_NAME}"
-      v.cpus   = VM_CPUS
-    end
-    node.trigger.after :up do |trigger|
-      trigger.name = "Finished Message"
-      trigger.info = "VM #{VM_DB_NAME} is ready IP: #{VM_DB_IP}"
-    end
+        nodeconfig.vm.hostname  =  node[:hostname]
 
-  end
+        nodeconfig.vm.disk :disk, size: "#{vm_disk_size}", primary: true
+        nodeconfig.vm.network   :private_network, name:nic_name, ip: node[:ip]
+        nodeconfig.vm.provision :shell, inline: "echo VM #{node[:name]} is ready IP: #{node[:ip]}", run: "always"
+        nodeconfig.vm.synced_folder ".", "/home/vagrant/centos"
+        nodeconfig.trigger.after :up do |trigger|
+          trigger.name = "Finished Message"
+          trigger.info = "VM #{node[:name]} is ready IP: #{node[:ip]}"
+        end
+        # nodeconfig.trigger
+        nodeconfig.vm.provider :virtualbox do |v|
+          v.memory = vm_memory
+          v.name   = node[:name]
+          v.cpus   = vm_cpus
+        end
+        # nodeconfig.vm.provider
+        if ( node[:isManager] ) then
+          nodeconfig.vm.provision :shell, path: "#{vm_bootstrapper}"
+        end
+        # end if
+      end
+      # config.vm.define
+    end
+    # end  nodes.each
 end
+# end of Vagrant.configure
 
   # config.vm.box_check_update = false
   # config.vm.network "forwarded_port", guest: 80, host: 8080
