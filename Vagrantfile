@@ -14,20 +14,24 @@
 
 VM_MANAGER_IP        = "172.16.245.100"
 VM_SLAVE_IP          = "192.168.3.109"
+VM_DB_IP             = "192.168.3.112"
+
 VM_MANAGER_NAME      = "rhManager"
 VM_SLAVE_NAME        = "rhSlave1"
+VM_DB_NAME           = "rhDatabase"
 VM_DISK_SIZE         = "10GB"
 VM_BOOTSTRAPPER      = "bootstrapManager.sh"
 VM_MEMORY            = 2048
 VM_CPUS              = 2
 VBGUEST_UPDATE       = true
-VBGUEST_UPGRADE      = true
 
 #TODO use .env file to store variables above,  see https://github.com/gosuri/vagrant-env
 Vagrant.configure("2") do |config|
   config.vm.box    = "centos/8"
-  config.vm.disk :disk, size: "#{VM_DISK_SIZE}", primary: true
-  # following provision is running for all VMs defined
+  config.vm.disk :disk, size: "#{VM_DISK_SIZE}", primary: VBGUEST_UPDATE
+  config.vbguest.installer_options = { allow_kernel_upgrade: VBGUEST_UPDATE }
+  config.vbguest.auto_update = true
+# following provision is running for all VMs defined
   config.vm.provision "shell", inline: <<-SHELL
       echo "Installing common packages for manager and slaves"
       sudo yum update
@@ -39,37 +43,29 @@ Vagrant.configure("2") do |config|
       sudo yum install -y elfutils-libelf-devel
     SHELL
 
-  config.vm.define "#{VM_MANAGER_NAME}" do |node|
+##############       rhManager Machine       ##################
+    config.vm.define "#{VM_MANAGER_NAME}" do |node|
     # Following provision is only for node on top of the general provision
-    node.vbguest.auto_update = VBGUEST_UPDATE
-    node.vbguest.installer_options = { allow_kernel_upgrade: VBGUEST_UPGRADE }
     node.vm.provision :shell, path: "#{VM_BOOTSTRAPPER}"
     node.vm.hostname  =  "#{VM_MANAGER_NAME}.localnet.com"
-    node.vbguest.installer_options = { allow_kernel_upgrade: true }
     node.vm.network :private_network, name: "VirtualBox Host-Only Ethernet Adapter", ip: VM_MANAGER_IP
-    # node.vm.provision :shell, inline: "echo VM #{VM_MANAGER_NAME} is ready IP: #{VM_MANAGER_IP}", run: "always"
+    node.vm.provision :shell, inline: "echo VM #{VM_MANAGER_NAME} is ready IP: #{VM_MANAGER_IP}", run: "always"
     node.vm.synced_folder ".", "/home/vagrant/centos"
-
     node.vm.provider :virtualbox do |v|
       v.memory = VM_MEMORY
       v.name   = "#{VM_MANAGER_NAME}"
       v.cpus   = VM_CPUS
     end
+##############       rhDatabase Machine       ##################
     node.trigger.after :up do |trigger|
       trigger.name = "Finished Message"
       trigger.info = "VM #{VM_MANAGER_NAME} is ready IP: #{VM_MANAGER_IP}"
     end
     end
-
   config.vm.define "#{VM_SLAVE_NAME}" do |node|
     node.vm.hostname  = "#{VM_SLAVE_NAME}.localnet.com"
     node.vm.network :private_network, name: "VirtualBox Host-Only Ethernet Adapter", ip: "#{VM_SLAVE_IP}"
-    # node.vm.provision :shell, inline: "echo VM #{VM_SLAVE_NAME} is ready IP: #{VM_SLAVE_IP}", run: "always"
-    node.vbguest.installer_options = { allow_kernel_upgrade: true }
-    node.vbguest.auto_update = true
-    node.vm.synced_folder ".", "/home/vagrant/centos", owner:"vagrant"
-
-
+    node.vm.network "forwarded_port", guest:   80, host: 80
     node.vm.provider :virtualbox do |v|
       v.memory = VM_MEMORY
       v.name   = "#{VM_SLAVE_NAME}"
@@ -79,20 +75,28 @@ Vagrant.configure("2") do |config|
       trigger.name = "Finished Message"
       trigger.info = "VM #{VM_SLAVE_NAME} is ready IP: #{VM_SLAVE_IP}"
     end
+  end
+##############       rhSlave1 Machine       ##################
+  config.vm.define "#{VM_DB_NAME}" do |node|
+    node.vm.hostname  = "#{VM_DB_NAME}.localnet.com"
+    node.vm.network :private_network, name: "VirtualBox Host-Only Ethernet Adapter", ip: "#{VM_DB_IP}"
+    node.ssh.insert_key = false
+    # node.vm.provision :shell, inline: "echo VM #{VM_SLAVE_NAME} is ready IP: #{VM_SLAVE_IP}", run: "always"
+    node.vm.synced_folder ".", "/vagrant", disabled:true, owner:"vagrant"
+    node.vm.provider :virtualbox do |v|
+      v.memory = VM_MEMORY
+      v.name   = "#{VM_DB_NAME}"
+      v.cpus   = VM_CPUS
+    end
+    node.trigger.after :up do |trigger|
+      trigger.name = "Finished Message"
+      trigger.info = "VM #{VM_DB_NAME} is ready IP: #{VM_DB_IP}"
+    end
 
   end
-
 end
 
-  # Disable automatic box update checking. If you disable this, then
-  # boxes will only be checked for updates when the user runs
-  # `vagrant box outdated`. This is not recommended.
   # config.vm.box_check_update = false
-
-  # Create a forwarded port mapping which allows access to a specific port
-  # within the machine from a port on the host machine. In the example below,
-  # accessing "localhost:8080" will access port 80 on the guest machine.
-  # NOTE: This will enable public access to the opened port
   # config.vm.network "forwarded_port", guest: 80, host: 8080
 
   # Create a forwarded port mapping which allows access to a specific port
