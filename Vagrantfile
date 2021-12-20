@@ -51,6 +51,8 @@ Vagrant.configure("2") do |config|
         nodeconfig.vm.box_check_update = false
         nodeconfig.vbguest.auto_update = vbguest_update
         nodeconfig.vbguest.installer_options = { allow_kernel_upgrade: vbguest_update }
+        # since we need to access the VMs from inside the wetwork to enable the ssh keys
+        nodeconfig.ssh.keys_only = false
 
         nodeconfig.vm.hostname  =  node[:hostname]
 
@@ -58,6 +60,7 @@ Vagrant.configure("2") do |config|
         nodeconfig.vm.network   :private_network, name:nic_name, ip: node[:ip]
         # nodeconfig.vm.network   :private_network, ip: node[:ip]
         nodeconfig.vm.provision :shell, inline: "echo VM #{node[:name]} is ready IP: #{node[:ip]}", run: "always"
+        #define mount option to restrict the folder attributes
         nodeconfig.vm.synced_folder "./ansible", "/home/vagrant/ansible", mount_options: ["dmode=775,fmode=777"]
         nodeconfig.trigger.after :up do |trigger|
           trigger.name = "Finished Message"
@@ -71,14 +74,14 @@ Vagrant.configure("2") do |config|
         end
         # nodeconfig.vm.provider
         if ( node[:isManager] ) then
-          nodeconfig.vm.provision :shell, path: "#{vm_bootstrapper}"
-          nodeconfig.vm.provision :shell, inline: <<-SHELL
-            echo "ANSIBLE config variables" >> ~/.bashrc
-            echo "export ANSIBLE_HOST_KEY_CHECKING=false"           >> ~/.bashrc
+          # define managerProvision and ansibleProvision
+          nodeconfig.vm.provision "managerProvision", type: "shell", run: "once", path: "#{vm_bootstrapper}"
+          nodeconfig.vm.provision "ansibleProvision", type: "shell", run: "once", inline: <<-SHELL
+            echo "#ANSIBLE config variables"                                 >> /home/vagrant/.bashrc
+            echo "export ANSIBLE_HOST_KEY_CHECKING=false"                   >> /home/vagrant/.bashrc
+            echo "export ANSIBLE_CONFIG=/home/vagrant/vagrant/ansible.cfg"  >> /home/vagrant/.bashrc
+            echo "export ANSIBLE_INVENTORY=/home/vagrant/ansible/hosts.ini" >> /home/vagrant/.bashrc
           SHELL
-        else
-          # since we need to access the VMs from inside the wetwork to enable the ssh keys
-          nodeconfig.ssh.keys_only = false
         end
         # end if
       end
