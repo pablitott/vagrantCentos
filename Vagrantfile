@@ -75,8 +75,8 @@ Vagrant.configure("2") do |config|
         # nodeconfig.vm.provider
         if ( node[:isManager] ) then
           # define managerProvision and ansibleProvision
-          nodeconfig.vm.provision "managerProvision", type: "shell", run: "once", path: "#{vm_bootstrapper}"
-          nodeconfig.vm.provision "ansibleProvision", type: "shell", run: "once", inline: <<-SHELL
+          nodeconfig.vm.provision "managerProvision", type: "shell", path: "#{vm_bootstrapper}"
+          nodeconfig.vm.provision "ansibleProvision", type: "shell", inline: <<-SHELL
             echo "#ANSIBLE config variables"                                 >> /home/vagrant/.bashrc
             echo "export ANSIBLE_HOST_KEY_CHECKING=false"                   >> /home/vagrant/.bashrc
             echo "export ANSIBLE_CONFIG=/home/vagrant/vagrant/ansible.cfg"  >> /home/vagrant/.bashrc
