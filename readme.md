@@ -29,6 +29,7 @@ Server Mask: 255.255.255.0
 Lower Address Bound: 192.168.3.100
 Upper Address Bound: 192.168.3.254
 ````
+DHCP Must be disabled
 ![](vagrant_network_dhcp.JPG)
 
 

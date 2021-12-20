@@ -17,10 +17,10 @@
   # get IP address: VBoxManage guestproperty get "rhSlave1" "/VirtualBox/GuestInfo/Net/0/V4/IP"
   # vboxmanage startvm <vm-uuid> --type emergencystop
 nodes = [
-  { :hostname => "rhManager.localnet",   :ip => "172.16.245.100", :name => "rhManager",  :isManager => true  },
+  { :hostname => "rhManager.localnet",   :ip => "192.168.3.101",  :name => "rhManager",  :isManager => true  },
   { :hostname => "rhDatabase.localnet",  :ip => "192.168.3.112",  :name => "rhDatabase", :isManager => false },
   { :hostname => "rhSlave1.localnet",    :ip => "192.168.3.109",  :name => "rhSlave1",   :isManager => false },
-  { :hostname => "rhSlave2.localnet",    :ip => "192.168.3.110",  :name => "rhSlave2",   :isManager => false },
+  # { :hostname => "rhSlave2.localnet",    :ip => "192.168.3.114",  :name => "rhSlave2",   :isManager => false },
 ]
 box_name             = "centos/8"
 vm_disk_size         = "10GB"
@@ -28,7 +28,7 @@ vm_bootstrapper      = "bootstrapManager.sh"
 vm_memory            = 2048
 vm_cpus              = 2
 vbguest_update       = true
-nic_name             = "VirtualBox Host-Only Ethernet Adapter"
+nic_name             = "VirtualBox Host-Only Ethernet Adapter #2"
 
 #TODO use .env file to store variables above,  see https://github.com/gosuri/vagrant-env
 Vagrant.configure("2") do |config|
@@ -56,8 +56,9 @@ Vagrant.configure("2") do |config|
 
         nodeconfig.vm.disk :disk, size: "#{vm_disk_size}", primary: true
         nodeconfig.vm.network   :private_network, name:nic_name, ip: node[:ip]
+        # nodeconfig.vm.network   :private_network, ip: node[:ip]
         nodeconfig.vm.provision :shell, inline: "echo VM #{node[:name]} is ready IP: #{node[:ip]}", run: "always"
-        nodeconfig.vm.synced_folder ".", "/home/vagrant/centos"
+        nodeconfig.vm.synced_folder "./ansible", "/home/vagrant/ansible", mount_options: ["dmode=775,fmode=777"]
         nodeconfig.trigger.after :up do |trigger|
           trigger.name = "Finished Message"
           trigger.info = "VM #{node[:name]} is ready IP: #{node[:ip]}"
@@ -71,6 +72,13 @@ Vagrant.configure("2") do |config|
         # nodeconfig.vm.provider
         if ( node[:isManager] ) then
           nodeconfig.vm.provision :shell, path: "#{vm_bootstrapper}"
+          nodeconfig.vm.provision :shell, inline: <<-SHELL
+            echo "ANSIBLE config variables" >> ~/.bashrc
+            echo "export ANSIBLE_HOST_KEY_CHECKING=false"           >> ~/.bashrc
+          SHELL
+        else
+          # since we need to access the VMs from inside the wetwork to enable the ssh keys
+          nodeconfig.ssh.keys_only = false
         end
         # end if
       end
@@ -107,13 +115,6 @@ end
   # backing providers for Vagrant. These expose provider-specific options.
   # Example for VirtualBox:
   #
-  # config.vm.provider "virtualbox" do |vb|
-  #   # Display the VirtualBox GUI when booting the machine
-  #   vb.gui = true
-  #
-  #   # Customize the amount of memory on the VM:
-  #   vb.memory = "1024"
-  # end
   #
   # View the documentation for the provider you are using for more
   # information on available options.

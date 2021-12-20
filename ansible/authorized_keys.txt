@@ -1,0 +1,15 @@
+192.168.3.112 | SUCCESS => {
+    "ansible_facts": {
+        "discovered_interpreter_python": "/usr/libexec/platform-python"
+    },
+    "changed": false,
+    "gid": 1000,
+    "group": "vagrant",
+    "mode": "0600",
+    "owner": "vagrant",
+    "path": "/home/vagrant/.ssh/authorized_keys",
+    "secontext": "unconfined_u:object_r:ssh_home_t:s0",
+    "size": 973,
+    "state": "file",
+    "uid": 1000
+}

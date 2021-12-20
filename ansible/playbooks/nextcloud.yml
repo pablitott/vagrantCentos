@@ -1,0 +1,55 @@
+---
+- hosts: app
+  become: true
+  tasks:
+    - name: Install nextcloud pre-requisites into the app server
+      dnf:
+        name: 
+          - epel-release
+          - yum-utils
+          - unzip
+          - curl
+          - wget
+          - bash-completion
+          - policycoreutils-python-utils
+          - mlocate
+          - bzip2
+        state: latest
+      
+    - name: Install apache
+      dnf:
+        name: httpd
+        state: latest
+      
+    - name: Copy configuration files
+      copy:
+        src: /home/vagrant/ansible/config/nextcloud.conf
+        dest: /etc/httpd/conf.d/nextcloud.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: start and enable apache service
+      service:
+        name: httpd
+        state: started
+        enabled: true
+      register: service_status
+
+    - name: Debug
+      debug:
+        var: service_status
+    
+    # - rpm_key:
+    #     state: present
+    #     key: https://rpms.remirepo.net/RPM-GPG-KEY-remi
+
+    - name: download remi-release-8.rpm
+      yum:
+        name: https://rpms.remirepo.net/enterprise/remi-release-8.rpm
+        state: present
+    # - name: install rei-release-8.rpm
+    #   yum:
+    #     name: /home/vagrant/remi-release-8.rpm
+    #     state: present
+

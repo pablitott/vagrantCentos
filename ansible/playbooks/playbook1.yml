@@ -1,0 +1,52 @@
+---
+- hosts: app
+  become: true
+  vars: 
+    conf_source: ./httpd_conf
+    vhosts_source: ./httpd-vhosts.conf
+
+  tasks:
+    - name: Install Apache into the app server
+      yum:
+        name: 
+        - httpd
+        - httpd-devel
+        state: present
+
+    - name: Check if apache config files exists
+      stat:
+        path: "{{  conf_source  }}"
+      register: apache_config 
+
+    - name: Check if vhosts files exists
+      stat:
+        path: "{{  vhosts_source  }}"
+      register: apache_vhosts 
+
+    - debug:
+        msg: "The file {{ conf_source }} DOES NOT exists"
+      when: apache_config.stat.exists == false
+  
+    - debug:
+        msg: "The file {{ vhosts_source }} DOES NOT exists"
+      when: apache_vhosts.stat.exists == false
+  
+    - name: Copy configuration files
+      copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        owner: root
+        group: root
+        mode: 0644
+      when: apache_config.stat.exists and apache_vhosts.stat.exists == false
+      with_items:
+        - src: "{{ conf_source }}"
+          dest: "/etc/httpd/conf/httpd.conf/{{ conf_source }}"
+        - src: "{{ vhosts_source }}"
+          dest: "/etc/httpd/conf/{{ vhosts_source }}"
+
+    - name: Start Apache and enabled
+      service:
+        name: httpd
+        state: restarted
+        enabled: true
