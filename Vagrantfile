@@ -11,11 +11,12 @@
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
+
   # array use: https://github.com/patrickdlee/vagrant-examples/blob/master/example6/Vagrantfile
+
   # get IP address: VBoxManage guestproperty get "rhSlave1" "/VirtualBox/GuestInfo/Net/0/V4/IP"
   # when a VM enter Guru Meditation state use:
-    # vboxmanage startvm <vm-uuid> --type emergencystop
-
+  # vboxmanage startvm <vm-uuid> --type emergencystop
 nodes = [
   { :hostname => "rhManager.localnet",   :ip => "192.168.3.101",  :name => "rhManager",  :isManager => true  },
   { :hostname => "rhDatabase.localnet",  :ip => "192.168.3.112",  :name => "rhDatabase", :isManager => false },
