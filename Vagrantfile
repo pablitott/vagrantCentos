@@ -11,20 +11,19 @@
 
   # Every Vagrant development environment requires a box. You can search for
   # boxes at https://vagrantcloud.com/search.
-
   # array use: https://github.com/patrickdlee/vagrant-examples/blob/master/example6/Vagrantfile
-
   # get IP address: VBoxManage guestproperty get "rhSlave1" "/VirtualBox/GuestInfo/Net/0/V4/IP"
-  # vboxmanage startvm <vm-uuid> --type emergencystop
+  # when a VM enter Guru Meditation state use:
+    # vboxmanage startvm <vm-uuid> --type emergencystop
+
 nodes = [
   { :hostname => "rhManager.localnet",   :ip => "192.168.3.101",  :name => "rhManager",  :isManager => true  },
   { :hostname => "rhDatabase.localnet",  :ip => "192.168.3.112",  :name => "rhDatabase", :isManager => false },
   { :hostname => "rhSlave1.localnet",    :ip => "192.168.3.109",  :name => "rhSlave1",   :isManager => false },
-  # { :hostname => "rhSlave2.localnet",    :ip => "192.168.3.114",  :name => "rhSlave2",   :isManager => false },
+  { :hostname => "rhSlave2.localnet",    :ip => "192.168.3.114",  :name => "rhSlave2",   :isManager => false },
 ]
 box_name             = "centos/8"
 vm_disk_size         = "10GB"
-vm_bootstrapper      = "bootstrapManager.sh"
 vm_memory            = 2048
 vm_cpus              = 2
 vbguest_update       = true
@@ -51,17 +50,12 @@ Vagrant.configure("2") do |config|
         nodeconfig.vm.box_check_update = false
         nodeconfig.vbguest.auto_update = vbguest_update
         nodeconfig.vbguest.installer_options = { allow_kernel_upgrade: vbguest_update }
-        # since we need to access the VMs from inside the wetwork to enable the ssh keys
-        nodeconfig.ssh.keys_only = false
-
         nodeconfig.vm.hostname  =  node[:hostname]
-
         nodeconfig.vm.disk :disk, size: "#{vm_disk_size}", primary: true
         nodeconfig.vm.network   :private_network, name:nic_name, ip: node[:ip]
         # nodeconfig.vm.network   :private_network, ip: node[:ip]
         nodeconfig.vm.provision :shell, inline: "echo VM #{node[:name]} is ready IP: #{node[:ip]}", run: "always"
         #define mount option to restrict the folder attributes
-        nodeconfig.vm.synced_folder "./ansible", "/home/vagrant/ansible", mount_options: ["dmode=775,fmode=777"]
         nodeconfig.trigger.after :up do |trigger|
           trigger.name = "Finished Message"
           trigger.info = "VM #{node[:name]} is ready IP: #{node[:ip]}"
@@ -75,12 +69,13 @@ Vagrant.configure("2") do |config|
         # nodeconfig.vm.provider
         if ( node[:isManager] ) then
           # define managerProvision and ansibleProvision
-          nodeconfig.vm.provision "managerProvision", type: "shell", path: "#{vm_bootstrapper}"
-          nodeconfig.vm.provision "ansibleProvision", type: "shell", inline: <<-SHELL
-            echo "#ANSIBLE config variables"                                 >> /home/vagrant/.bashrc
-            echo "export ANSIBLE_HOST_KEY_CHECKING=false"                   >> /home/vagrant/.bashrc
-            echo "export ANSIBLE_CONFIG=/home/vagrant/vagrant/ansible.cfg"  >> /home/vagrant/.bashrc
-            echo "export ANSIBLE_INVENTORY=/home/vagrant/ansible/hosts.ini" >> /home/vagrant/.bashrc
+          nodeconfig.vm.synced_folder "./ansible", "/home/vagrant/ansible", mount_options: ["dmode=775,fmode=777"]
+          nodeconfig.vm.provision "managerProvision", type: "shell", path: "bootstrapManager.sh"
+          nodeconfig.vm.provision "ansibleProvision", type: "shell", path: "bootstrapAnsible.sh"
+        else
+          nodeconfig.vm.provision "password", type: "shell", privileged: true, inline: <<-SHELL
+            sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+            systemctl restart sshd.service
           SHELL
         end
         # end if
