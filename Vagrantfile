@@ -28,7 +28,7 @@ vm_bootstrapper      = "bootstrapManager.sh"
 vm_memory            = 2048
 vm_cpus              = 2
 vbguest_update       = true
-nic_name             = "VirtualBox Host-Only Ethernet Adapter #2"
+nic_name             = "VirtualBox Host-Only Ethernet Adapter #5"
 
 #TODO use .env file to store variables above,  see https://github.com/gosuri/vagrant-env
 Vagrant.configure("2") do |config|
@@ -51,9 +51,6 @@ Vagrant.configure("2") do |config|
         nodeconfig.vm.box_check_update = false
         nodeconfig.vbguest.auto_update = vbguest_update
         nodeconfig.vbguest.installer_options = { allow_kernel_upgrade: vbguest_update }
-        # since we need to access the VMs from inside the wetwork to enable the ssh keys
-        nodeconfig.ssh.keys_only = false
-
         nodeconfig.vm.hostname  =  node[:hostname]
 
         nodeconfig.vm.disk :disk, size: "#{vm_disk_size}", primary: true
