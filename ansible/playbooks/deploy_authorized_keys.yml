@@ -1,0 +1,21 @@
+---
+- hosts: all
+  tasks:
+  - name: make directory
+    file:
+      path: "/home/{{ user }}/.ssh"
+      state: directory
+  - name: create empty file
+    file:
+      path: "/home/{{ user }}/.ssh/authorized_keys"
+      state: touch
+  - authorized_key:
+      user: vagrant
+      state: present
+      manage_dir: yes
+      key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+# source: https://medium.com/@visualskyrim/ansible-playbook-deploy-the-public-key-to-remote-hosts-da3f3b4b5481
+#ansible-playbook -i deploy_authorized_keys.yml --ask-pass --extra-vars='pubkey=""'
+# in this file user vagrant should be replaced by the proper user
+

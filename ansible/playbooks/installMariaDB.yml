@@ -1,6 +1,6 @@
 ---
 - name: Install mariaDB database- server
-  hosts: db
+  hosts: databases
   gather_facts: true
   become: true
   vars:
@@ -13,7 +13,7 @@
           - python3-PyMySQL
         state: latest
     - name: start mariadb
-      service: 
+      service:
         name: mariadb
         enabled: true
         state: started
@@ -43,7 +43,7 @@
       firewalld:
         source: 192.168.3.9
         state: enabled
-        permanent: yes  
+        permanent: yes
     - name: set the database source
       firewalld:
         port: 3306/tcp

@@ -1,14 +1,14 @@
 ---
-- hosts: app
+- hosts: nodes
   become: true
-  vars: 
+  vars:
     conf_source: ./httpd_conf
     vhosts_source: ./httpd-vhosts.conf
 
   tasks:
     - name: Install Apache into the app server
       yum:
-        name: 
+        name:
         - httpd
         - httpd-devel
         state: present
@@ -16,21 +16,21 @@
     - name: Check if apache config files exists
       stat:
         path: "{{  conf_source  }}"
-      register: apache_config 
+      register: apache_config
 
     - name: Check if vhosts files exists
       stat:
         path: "{{  vhosts_source  }}"
-      register: apache_vhosts 
+      register: apache_vhosts
 
     - debug:
         msg: "The file {{ conf_source }} DOES NOT exists"
       when: apache_config.stat.exists == false
-  
+
     - debug:
         msg: "The file {{ vhosts_source }} DOES NOT exists"
       when: apache_vhosts.stat.exists == false
-  
+
     - name: Copy configuration files
       copy:
         src: "{{ item.src }}"
